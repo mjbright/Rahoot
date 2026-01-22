@@ -337,6 +337,14 @@ class Game {
       questionNumber: this.round.currentQuestion + 1,
     })
 
+    //console.log( `Question ${ this.round.currentQuestion + 1 }` )
+    //console.log( `length = ${ question.answers.length }` )
+    //console.log( `answers = ${ question.answers }` )
+    //console.log( `solution = ${ question.solution }` )
+    const answerText = question.answers[question.solution]
+    console.log( `Question ${ this.round.currentQuestion + 1 }: "${ question.question }"` )
+    console.log( `\t\t[${ question.solution }/${ question.answers.length }]: answer is "${ answerText }"` )
+
     await sleep(2)
 
     if (!this.started) {
