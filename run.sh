@@ -5,7 +5,8 @@
 IP=localhost
 #IMAGE=ralex91/rahoot:latest
 #IMAGE=mjbright/rahoot:v1
-IMAGE=mjbright/rahoot:v1.1
+#IMAGE=mjbright/rahoot:v1.1
+IMAGE=mjbright/rahoot:v1.2
 
 # docker run -d -p 3000:3000 -p 3001:3001 -e WEB_ORIGIN=http://localhost:3000 -e SOCKET_URL=http://localhost:3001 \
 #            -v ./config:/app/config ralex91/rahoot:latest

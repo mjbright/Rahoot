@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# Multi-architecture builds
+# - using buildx
+# - without requiring qemu installation
+# Based on info at:
+# - https://andrewlock.net/combining-multiple-docker-images-into-a-multi-arch-image/
+
 IMAGE=mjbright/rahoot
 TAGGED_IMAGE=$IMAGE:v1.2
 
