@@ -1,86 +1,74 @@
+#!/usr/bin/env bash
 
-PLATFORM="--platform linux/arm64"
-IMAGE_VERSION=v1.1
-IMAGE_NAME=mjbright/rahoot
-IMAGE=$IMAGE_NAME:$IMAGE_VERSION
-
-cd $(dirname $0)
-
-TMP=~/var/mono2micro.docker-builds
-rm -rf   $TMP
-mkdir -p $TMP
-
-DIR=../../1.Monoliths
-DIR=~/src/github.com/GIT_mjbright/monolith2microservice/1.Monoliths
-
-# ???? rsync -av $DIR/* $TMP
+IMAGE=mjbright/rahoot
+TAGGED_IMAGE=$IMAGE:v1.2
 
 PLAIN="--progress plain"
 
 ## -- Func: --------------------------------------------------------------------------------
 
-die() {
-    echo "$0: die - Build failed $*"
-    exit 1
+die() { echo "$0: die - $*">&2; exit 1; }
+
+LINUX_BUILD() {
+    ARCH=$1; shift
+
+    PLATFORM=linux/$ARCH
+    IMG=$IMAGE-$ARCH
+
+    CMD="docker buildx build $PLAIN -t $IMG -f Dockerfile --provenance false --output push-by-digest=true,type=image,push=true --platform $PLATFORM ."
+    echo "-- $CMD"
+    $CMD 2>&1 | tee build.${ARCH}.log || die "Build failed - $PLATFORM"
 }
 
-BUILD_ARM64() {
-    PLATFORM="--platform linux/arm64"
-    CMD="./time.py docker build $PLAIN $PLATFORM -t $IMAGE -f Dockerfile ."
-    echo "-- $CMD"
-    $CMD || die "Failed to build for $PLATFORM"
+BUILDS() {
+    T0=$SECONDS
+      LINUX_BUILD amd64
+    T1=$SECONDS
+    let TOOK1=T1-T0
+    echo "amd64 build took $TOOK1 seconds"
+    
+      LINUX_BUILD arm64
+    T2=$SECONDS
+    let TOOK2=T2-T1
+    echo "amd64 build took $TOOK1 seconds"
+    echo "arm64 build took $TOOK2 seconds"
+    
+    let TOOK=T2-T0
+    echo "Both builds took $TOOK seconds"
 }
 
-BUILD_AMD64_ARM64() {
-    #PLATFORM="--platform linux/amd64"
-    PLATFORM="--platform linux/amd64,linux/arm64"
-    CMD="./time.py docker build $PLAIN $PLATFORM -t $IMAGE -f Dockerfile ."
-    echo "-- $CMD"
-    $CMD || die "Failed to build for $PLATFORM"
-
-    CMD="docker login"
-    echo "-- $CMD"
-    $CMD || die "Failed to 'docker login'"
-
-    CMD="docker push $IMAGE_NAME"
-    echo "-- $CMD"
-    $CMD || die "Failed to push to docker hub: $IMAGE"
+BUILDER_CREATE() {
+    docker buildx ls 2>&1 | grep '^build*' || {
+        CMD="docker buildx create --use --name build --node build --driver-opt network=host"
+        echo "-- $CMD"
+        $CMD 2>&1 | tee build.create.log || die "Buildx create failed"
+    }
 }
-
-## -- Args: --------------------------------------------------------------------------------
-
-if [ "$1" = "-push" ]; then
-    #read -p "Press <enter> to build for arm64,amd64, push to Docker hub:"
-    BUILD_AMD64_ARM64
-    exit $?
-fi
-
-BUILD_ARM64
-
-exit
-
-# Arm64:
-if [ "$1" = "-local" ]; then
-    BUILD_MONOLITH_IMAGES_quiz linux/arm64
-    #TOOK $START_S "flask-quiz linux/arm64"
-    #START_S=$SECONDS
-    exit
-fi
 
 ## -- Main: --------------------------------------------------------------------------------
 
-BUILD_MONOLITH_IMAGES_onestore linux/amd64
-#exit
-BUILD_MONOLITH_IMAGES_onestore linux/arm64
+BUILDER_CREATE
 
-BUILD_MONOLITH_IMAGES_survey linux/amd64
-BUILD_MONOLITH_IMAGES_survey linux/arm64
+#BUILDS
 
-BUILD_MONOLITH_IMAGES_quiz linux/amd64
-BUILD_MONOLITH_IMAGES_quiz linux/arm64
+M_AMD64=$( awk '/exporting manifest/ { print $4; }' build.amd64.log )
+M_ARM64=$( awk '/exporting manifest/ { print $4; }' build.arm64.log )
 
-TOOK $START_S_0 "All images"
+echo "Manifest AMD64: $M_AMD64"
+echo "Manifest ARM64: $M_ARM64"
 
-docker image ls | grep flask- | grep -v '<none>'
+#docker manifest inspect andrewlockdd/alpine-clang@sha256:038adbc4d6dc2e28f0818d5ae0fc1cae6cc42b854bd809f236435bed33f6ea63
+I_AMD64=${IMAGE}-amd64@$M_AMD64
+I_ARM64=${IMAGE}-arm64@$M_ARM64
+docker manifest inspect $I_AMD64
+docker manifest inspect $I_ARM64
 
+#docker manifest create andrewlockdd/alpine-clang:1.0 \
+#  --amend andrewlockdd/alpine-clang@sha256:038adbc4d6dc2e28f0818d5ae0fc1cae6cc42b854bd809f236435bed33f6ea63 \
+#  --amend andrewlockdd/alpine-clang@sha256:9df972530f876295787deea7424db90cbd14d5a8fa602b2a3bce82977aa1025e
+
+docker manifest create $TAGGED_IMAGE \
+    --amend $I_AMD64 --amend $I_ARM64
+
+docker manifest push $TAGGED_IMAGE
 
