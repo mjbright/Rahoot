@@ -6,6 +6,9 @@ import { createInviteCode, timeToPoint } from "@rahoot/socket/utils/game"
 import sleep from "@rahoot/socket/utils/sleep"
 import { v4 as uuid } from "uuid"
 
+// mjb:
+import Config from "@rahoot/socket/services/config"
+
 const registry = Registry.getInstance()
 
 class Game {
@@ -47,6 +50,11 @@ class Game {
     if (!io) {
       throw new Error("Socket server not initialized")
     }
+
+    //mjb:
+    this.config = Config.game();
+    //if (password !== config.managerPassword) {
+    //console.error("Failed to read game config:", error)
 
     this.io = io
     this.gameId = uuid()
@@ -304,12 +312,13 @@ class Game {
 
     this.started = true
 
+    const delay = this.config.test ? 0 : 3
     this.broadcastStatus(STATUS.SHOW_START, {
-      time: 3,
+      time: delay,
       subject: this.quizz.subject,
     })
 
-    await sleep(3)
+    await sleep(delay)
 
     this.io.to(this.gameId).emit("game:startCooldown")
     await this.startCooldown(3)
@@ -345,7 +354,8 @@ class Game {
     console.log( `Question ${ this.round.currentQuestion + 1 }: "${ question.question }"` )
     console.log( `\t\t[${ question.solution }/${ question.answers.length }]: answer is "${ answerText }"` )
 
-    await sleep(2)
+    const delay = this.config.test ? 0 : 2
+    await sleep(delay)
 
     if (!this.started) {
       return
@@ -357,7 +367,8 @@ class Game {
       cooldown: question.cooldown,
     })
 
-    await sleep(question.cooldown)
+    const delay2 = this.config.test ? 0 : question.cooldown
+    await sleep(delay2)
 
     if (!this.started) {
       return
@@ -383,6 +394,9 @@ class Game {
   }
 
   showResults(question: any) {
+    //console.log(`showResults`);
+    if (this.config.verbose) { console.log(`showResults[VERBOSE]`); }
+
     const oldLeaderboard =
       this.leaderboard.length === 0
         ? this.players.map((p) => ({ ...p }))
@@ -431,6 +445,33 @@ class Game {
         aheadOfMe: aheadPlayer ? aheadPlayer.username : null,
       })
     })
+
+    var pointsSeries = [];
+    this.players.forEach((player, index) => { pointsSeries.push(player.points); });
+    console.log(`showResults: creating pointsSeries[${this.players.length}] => ${ pointsSeries }`);
+    // console.log(`showResults: this.players.length = ${ this.players.length }`);
+
+    // console.log(`showResults: calculating min/max`);
+    var min=this.players[0].points;
+    var max=this.players[0].points;
+    this.players.forEach(item => {if(item.points <min) min=item.points});
+    this.players.forEach(item => {if(item.points >max) max=item.points});
+    //if (this.config.verbose) { console.log(`showResults: calculating min/max: => ${ min } - ${max}`); }
+
+    if (this.config.verbose) { console.log(`showResults[VERBOSE]: calculating mean/standard-deviation`); }
+    var meanTotal     = 0;
+    var varianceTotal = 0;
+    this.players.forEach( item => { meanTotal     = meanTotal  + item.points            } );
+    const mean = meanTotal / this.players.length;
+
+    this.players.forEach( item => { varianceTotal = varianceTotal + Math.pow((item.points - meanTotal),2)} );
+    const variance = varianceTotal / this.players.length;
+    const sd = Math.sqrt(variance);
+
+    if (this.config.verbose) {
+      console.log(`showResults[VERBOSE]: calculating mean/standard-deviation: mean=${mean} variance=${variance} sd={sd}`);
+    }
+    console.log(`showResults:     ${min} < mean=${mean.toFixed(2)} < ${max},     [ sd=${sd.toFixed(2)} ]`);
 
     this.sendStatus(this.manager.id, STATUS.SHOW_RESPONSES, {
       question: question.question,

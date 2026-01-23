@@ -1,5 +1,5 @@
 {
   "managerPassword": "PASSWORD",
   "music": false,
-  "verbose": true
+  "test":    true
 }

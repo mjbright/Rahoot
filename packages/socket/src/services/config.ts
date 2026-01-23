@@ -84,6 +84,7 @@ class Config {
     }
 
     try {
+      console.log(`config.ts: reading config file ${ getPath("game.json") }`);
       const config = fs.readFileSync(getPath("game.json"), "utf-8")
 
       return JSON.parse(config)
