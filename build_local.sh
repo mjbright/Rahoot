@@ -1,10 +1,11 @@
 
-PLATFORM="--platform linux/arm64"
-IMAGE_VERSION=v1.1
-IMAGE_NAME=mjbright/rahoot
-IMAGE=$IMAGE_NAME:$IMAGE_VERSION
-
 cd $(dirname $0)
+
+PLATFORM="--platform linux/arm64"
+IMAGE_NAME=mjbright/rahoot
+#IMAGE_VERSION=v1.1
+IMAGE_VERSION=$( cat .image_version )
+IMAGE=$IMAGE_NAME:$IMAGE_VERSION
 
 TMP=~/var/mono2micro.docker-builds
 rm -rf   $TMP

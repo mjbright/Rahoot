@@ -6,8 +6,11 @@
 # Based on info at:
 # - https://andrewlock.net/combining-multiple-docker-images-into-a-multi-arch-image/
 
+cd $( dirname $0 )
+
 IMAGE=mjbright/rahoot
-TAGGED_IMAGE=$IMAGE:v1.2
+IMAGE_VERSION=$( cat .image_version )
+TAGGED_IMAGE=$IMAGE:$IMAGE_VERSION
 
 PLAIN="--progress plain"
 

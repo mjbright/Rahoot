@@ -3,10 +3,21 @@
 # Source based on 2025-Dec-14, 1.0.2 release
 
 IP=localhost
+BROWSE_IP=$IP
 #IMAGE=ralex91/rahoot:latest
 #IMAGE=mjbright/rahoot:v1
 #IMAGE=mjbright/rahoot:v1.1
-IMAGE=mjbright/rahoot:v1.2
+IMAGE_VERSION=$( cat .image_version )
+IMAGE=mjbright/rahoot:$IMAGE_VERSION
+
+if [ "$1" = "-pub" ]; then
+    IP="0.0.0.0"
+    case $(hostname) in
+        #air) BROWSE_IP=$( ifconfig | grep -A10 bridge101 | awk '/inet / { print $2; }' );;
+        air) BROWSE_IP=$( ifconfig | grep -A10 en0: | awk '/inet / { print $2; }' );;
+	*)   BROWSE_IP=$( hostname -i);;
+    esac
+fi
 
 # docker run -d -p 3000:3000 -p 3001:3001 -e WEB_ORIGIN=http://localhost:3000 -e SOCKET_URL=http://localhost:3001 \
 #            -v ./config:/app/config ralex91/rahoot:latest
@@ -20,8 +31,8 @@ docker run -d -p 3000:3000 -p 3001:3001 -e WEB_ORIGIN=http://$IP:3000 -e SOCKET_
 
 sleep 5
 docker ps | grep mjb_rahoot_quiz
-echo "Now students browse to http://$IP:3000"
-echo "Now manager  browse to http://$IP:3000/manager (mdp: St****00..)"
+echo "Now students browse to http://$BROWSE_IP:3000"
+echo "Now manager  browse to http://$BROWSE_IP:3000/manager (mdp: St****00..)"
 echo "Viewing logs ... ( docker logs -f mjb_rahoot_quiz ):"
 docker logs -f mjb_rahoot_quiz
 
