@@ -353,6 +353,7 @@ class Game {
     const answerText = question.answers[question.solution]
     console.log( `Question ${ this.round.currentQuestion + 1 }: "${ question.question }"` )
     console.log( `\t\t[${ question.solution }/${ question.answers.length }]: answer is "${ answerText }"` )
+    console.log( `answers = ${ question.answers }` )
 
     const delay = this.config.test ? 0 : 2
     await sleep(delay)
